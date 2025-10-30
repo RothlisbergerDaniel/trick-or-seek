@@ -22,7 +22,7 @@ local collisions = {}
       rl = rx - (rw/2); rr = rx + (rw/2); rt = ry + (rh/2); rb = ry - (rh/2) --set edges based on center
     end
     
-    if px >= rl and px <= rr and py >= rb and py <= rt then return true else return false end --if the point is within bounds, return true
+    if px >= rl and px <= rr and py <= rb and py >= rt then return true else return false end --if the point is within bounds, return true
   end
 
   function collisions.rectRect(r1x,r1y,r1w,r1h, r2x,r2y,r2w,r2h, mode) -- collision between rectangles given coordinates and dimensions.
@@ -35,7 +35,7 @@ local collisions = {}
       r2l = r2x - (r2w/2); r2r = r2x + (r2w/2); r2t = r2y - (r2h/2); r2b = r2y + (r2h/2) -- set edges based on centers
     end
     
-    if r1l <= r2r and r1r >= r2l and r1b <= r2t and r1t >= r2b then return true else return false end -- as long as rectangles are properly colliding, return true
+    if r1l <= r2r and r1r >= r2l and r1b >= r2t and r1t <= r2b then return true else return false end -- as long as rectangles are properly colliding, return true
   end
 
   function collisions.circleRect(cx,cy,cr, rx,ry,rw,rh, mode) -- collision between circle and rectangle, given coordinates and dimensions.
