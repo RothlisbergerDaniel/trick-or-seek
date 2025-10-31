@@ -3,7 +3,7 @@ neighborhood = require "lib.neighborhood"
   
   kids.kids = {} -- container for NPCs
   kids.interCheckTimer = 0.1
-  kids.speeds = {min=8, max=15}
+  kids.speeds = {min=10, max=16}
   
   function kids.generate(count)
     kids.kids = {} -- reset container
@@ -13,7 +13,7 @@ neighborhood = require "lib.neighborhood"
     
     for i = 1, count do
       local x, y = math.random(1,d.x), math.random(1,d.y)
-      table.insert(kids.kids, {x=(x*d.ox)+co.x, y=(y*d.oy)+co.y+(d.sy*0.7), dir={x=0,y=0}, speed=math.random(kids.speeds.min, kids.speeds.max), target={x=x,y=y}, delay=math.random()*4, interPos={x=x,y=y}, inInter = false, interPause = 0}) -- position, movement direction (+/- 1), speed of movement (tweakable), target house coordinates, delay before moving (in seconds), intersection position (for setting new targets), pause at intersection
+      table.insert(kids.kids, {x=(x*d.ox)+co.x, y=(y*d.oy)+co.y+(d.sy*0.7), dir={x=0,y=0}, speed=math.random(kids.speeds.min, kids.speeds.max), target={x=x,y=y}, delay=math.random()*4, interPos={x=x,y=y}, inInter = false, interPause = 0, costume=math.random(1,5), cdir=1}) -- position, movement direction (+/- 1), speed of movement (tweakable), target house coordinates, delay before moving (in seconds), intersection position (for setting new targets), pause at intersection
       kids.setTarget(kids.kids[i], 0)
       kids.getNextDir(kids.kids[i], true)
       
@@ -39,7 +39,11 @@ neighborhood = require "lib.neighborhood"
           kids.npcMove(k, dt)
           if kids.interCheckTimer <= 0 then kids.interCheckTimer = 0.1 end
         end
-        
+        if k.dir.x == 0 then
+          if math.random(1,150)==a1 then
+            k.cdir = k.cdir * -1
+          end
+        end
         
       end
     else
@@ -63,28 +67,30 @@ neighborhood = require "lib.neighborhood"
     
     if kids.kids then
       for i = 1, #kids.kids do
-        if master then love.graphics.setColor(0.7,0.7,0.7)
-        else love.graphics.setColor(1,1,1) end
-        love.graphics.rectangle("fill", k[i].x - 16, k[i].y - 16, 32, 32)
+        if master then love.graphics.setColor(1,1,1, 0.7)
+        else love.graphics.setColor(1,1,1,1) end
+        --love.graphics.rectangle("fill", k[i].x - 16, k[i].y - 16, 32, 32)
+        if k[i].cdir == 0 then k[i].cdir = -1 end
+        drawAnimationFrame(kidsprites[k[i].costume], 3, k[i].x, k[i].y, k[i].cdir, 0, 1, 1)
         
-        love.graphics.setColor(0,1,0)
+        --love.graphics.setColor(0,1,0)
         --love.graphics.print(pprint.pformat(k[i].target), k[i].x, k[i].y)
         --love.graphics.print(pprint.pformat(k[i].dir), k[i].x, k[i].y-40)
       end
     end
-    
+    love.graphics.setColor(1,1,1,1)
     
     
   end
   
-  function kids.hiderMove()
+  --[[function kids.hiderMove()
     local d = neighborhood.dimensions
     local g = neighborhood.candyGrid
     
     
     
     
-  end
+  end]]
   
   function kids.npcMove(k, dt)
     
@@ -98,12 +104,15 @@ neighborhood = require "lib.neighborhood"
           k.inInter = true
           if k.dir.x > 0 then
             k.interPos.x = math.ceil(k.interPos.x) + 0.5
+            k.cdir = 1
           elseif k.dir.x < 0 then
             k.interPos.x = math.floor(k.interPos.x) - 0.5
+            k.cdir = -1
           end
           k.interPos.y = k.interPos.y + k.dir.y
           
           kids.getNextDir(k, false) -- update child direction
+          if k.dir.y == 0 then k.cdir = k.dir.x end
           k.speed = math.random(kids.speeds.min, kids.speeds.max)
           k.interPause = math.random() * 0.5
         end
@@ -111,6 +120,11 @@ neighborhood = require "lib.neighborhood"
         k.inInter = false
       end
     end
+    
+    if k.x <= 150 then k.dir.x = 1; k.cdir = 1 end
+    if k.x >= 640-150 then k.dir.x = -1; k.cdir = -1 end
+    if k.y <= 10 then k.dir.y = 1 end
+    if k.y >= 360-10 then k.dir.y = -1 end
     
     if k.interPause == 0 then
       k.x = k.x + k.dir.x * k.speed * dt
@@ -133,7 +147,7 @@ neighborhood = require "lib.neighborhood"
         else
           k.dir.x = -1
         end
-        
+        k.cdir = k.dir.x
       end
       k.dir.y = 0
     else
@@ -172,8 +186,8 @@ neighborhood = require "lib.neighborhood"
     local d = neighborhood.dimensions
     local g = neighborhood.candyGrid
     
-    local bBoxPos = {x=(k.target.x*d.ox)-(d.sx*0.5)+co.x+(d.sx*0.375), y=(k.target.y*d.oy)+co.y+(d.sy*0.5)}
-    return collisions.rectRect(k.x-8,k.y-8,16,16, bBoxPos.x,bBoxPos.y,d.sx*0.25,d.sy*0.375, "corner")
+    local bBoxPos = {x=(k.target.x*d.ox)-(d.sx*0.5)+co.x+(d.sx*0.45), y=(k.target.y*d.oy)+co.y+(d.sy*0.5)}
+    return collisions.rectRect(k.x-2,k.y-2,4,4, bBoxPos.x,bBoxPos.y,d.sx*0.1,d.sy*0.375, "corner")
   end
   
   function kids.checkInters(k) --check intersection collisions
@@ -183,17 +197,17 @@ neighborhood = require "lib.neighborhood"
     for y = 1, #g do
       for x = 1, #g[y] do
         local iBoxPos = {
-          {x=(x*d.ox)-(d.ox*0.5)+co.x-(d.sx*0.06), y=(y*d.oy)+co.y+(d.oy*0.5)-(d.sy*0.06)}, --1
-          {x=(x*d.ox)+(d.ox*0.5)+co.x-(d.sx*0.06), y=(y*d.oy)+co.y+(d.oy*0.5)-(d.sy*0.06)}, --2
-          {x=(x*d.ox)-(d.ox*0.5)+co.x-(d.sx*0.06), y=(y*d.oy)+co.y-(d.oy*0.5)-(d.sy*0.06)}, --3
-          {x=(x*d.ox)+(d.ox*0.5)+co.x-(d.sx*0.06), y=(y*d.oy)+co.y-(d.oy*0.5)-(d.sy*0.06)}, --4
+          {x=(x*d.ox)-(d.ox*0.5)+co.x-(d.sx*0.15), y=(y*d.oy)+co.y+(d.oy*0.5)-(d.sy*0.15)}, --1
+          {x=(x*d.ox)+(d.ox*0.5)+co.x-(d.sx*0.15), y=(y*d.oy)+co.y+(d.oy*0.5)-(d.sy*0.15)}, --2
+          {x=(x*d.ox)-(d.ox*0.5)+co.x-(d.sx*0.15), y=(y*d.oy)+co.y-(d.oy*0.5)-(d.sy*0.15)}, --3
+          {x=(x*d.ox)+(d.ox*0.5)+co.x-(d.sx*0.15), y=(y*d.oy)+co.y-(d.oy*0.5)-(d.sy*0.15)}, --4
         }
         
         local coll = {
-          collisions.pointRect(k.x,k.y, iBoxPos[1].x,iBoxPos[1].y,d.sx*0.12,d.sy*0.12, "corner"),
-          collisions.pointRect(k.x,k.y, iBoxPos[2].x,iBoxPos[2].y,d.sx*0.12,d.sy*0.12, "corner"),
-          collisions.pointRect(k.x,k.y, iBoxPos[3].x,iBoxPos[3].y,d.sx*0.12,d.sy*0.12, "corner"),
-          collisions.pointRect(k.x,k.y, iBoxPos[4].x,iBoxPos[4].y,d.sx*0.12,d.sy*0.12, "corner"),
+          collisions.pointRect(k.x,k.y, iBoxPos[1].x,iBoxPos[1].y,d.sx*0.3,d.sy*0.3, "corner"),
+          collisions.pointRect(k.x,k.y, iBoxPos[2].x,iBoxPos[2].y,d.sx*0.3,d.sy*0.3, "corner"),
+          collisions.pointRect(k.x,k.y, iBoxPos[3].x,iBoxPos[3].y,d.sx*0.3,d.sy*0.3, "corner"),
+          collisions.pointRect(k.x,k.y, iBoxPos[4].x,iBoxPos[4].y,d.sx*0.3,d.sy*0.3, "corner"),
         }
         
         if coll[1] or coll[2] or coll[3] or coll[4] then return true end
